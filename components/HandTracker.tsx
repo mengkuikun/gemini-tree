@@ -20,7 +20,7 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onHandUpdate, active }) => {
     setError(null);
     setIsInitializing(true);
     
-    // Clean up existing resources if retrying
+    // 清理现有资源
     if (resourcesRef.current) {
       if (resourcesRef.current.camera) resourcesRef.current.camera.stop();
       if (resourcesRef.current.hands) resourcesRef.current.hands.close();
@@ -28,12 +28,16 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onHandUpdate, active }) => {
     }
 
     try {
-      // Check for mediaDevices support
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Your browser does not support camera access or you are not using HTTPS.');
+      // 1. 核心安全性检查：摄像头需要 HTTPS 或 localhost
+      if (!window.isSecureContext) {
+        throw new Error('摄像头访问需要安全上下文 (HTTPS)。请确保您的网站已启用 SSL。');
       }
 
-      // Initialize MediaPipe Hands
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('您的浏览器不支持摄像头访问，或处于非安全环境。');
+      }
+
+      // 2. 初始化 MediaPipe Hands
       // @ts-ignore
       const hands = new window.Hands({
         locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
@@ -73,7 +77,16 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onHandUpdate, active }) => {
         }
       });
 
-      // Initialize Camera Utility
+      // 3. 使用原生方式先尝试获取流，确保触发权限弹窗
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: 640, height: 480 } 
+      });
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      // 4. 初始化 MediaPipe Camera Utility
       // @ts-ignore
       const camera = new window.Camera(videoRef.current, {
         onFrame: async () => {
@@ -89,15 +102,17 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onHandUpdate, active }) => {
       resourcesRef.current = { camera, hands };
       setIsInitializing(false);
     } catch (err: any) {
-      console.error("Camera Initialization Error:", err);
-      let msg = 'Failed to acquire camera feed.';
+      console.error("Camera Error:", err);
+      let msg = err.message || '获取摄像头失败';
+      
       if (err.name === 'NotAllowedError' || err.message?.toLowerCase().includes('permission denied')) {
-        msg = 'Camera permission denied. Please click the "Allow" button in your browser address bar or check site settings.';
+        msg = '摄像头权限被拒绝。请在浏览器地址栏点击锁形图标，重新允许摄像头访问，然后刷新页面。';
       } else if (err.name === 'NotFoundError') {
-        msg = 'No camera found on this device. Please connect a webcam.';
+        msg = '未检测到摄像头设备，请连接摄像头。';
       } else if (err.name === 'NotReadableError') {
-        msg = 'Camera is already in use by another application.';
+        msg = '摄像头正被其他程序占用，请关闭其他视频会议软件。';
       }
+      
       setError(msg);
       setIsInitializing(false);
     }
@@ -120,38 +135,38 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onHandUpdate, active }) => {
   if (!active) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 w-64 h-48 rounded-2xl overflow-hidden glass border border-white/20 shadow-2xl z-50 flex items-center justify-center bg-black/40 group">
+    <div className="fixed bottom-6 right-6 w-72 h-52 rounded-3xl overflow-hidden glass border border-white/10 shadow-2xl z-50 flex items-center justify-center bg-black/40 group">
       <video 
         ref={videoRef} 
-        className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-700 ${error || isInitializing ? 'opacity-0' : 'opacity-100'}`} 
+        className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-1000 ${error || isInitializing ? 'opacity-0' : 'opacity-100'}`} 
         playsInline 
         muted
       />
       
       {isInitializing && !error && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-          <span className="text-[10px] text-white/60 uppercase tracking-[0.2em] animate-pulse">Initializing Vision...</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md">
+          <div className="w-10 h-10 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin mb-4"></div>
+          <span className="text-[10px] text-yellow-500/80 uppercase tracking-[0.3em] font-bold">视觉引擎初始化中</span>
         </div>
       )}
 
       {error && (
-        <div className="p-6 text-center bg-black/90 absolute inset-0 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
-          <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center mb-3 border border-red-500/20">
-             <span className="text-red-500 text-xl font-bold">!</span>
+        <div className="p-8 text-center bg-black/90 absolute inset-0 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/30">
+             <span className="text-red-500 text-2xl">⚠️</span>
           </div>
-          <div className="text-red-400 text-[10px] font-bold uppercase tracking-widest mb-2">Access Error</div>
-          <p className="text-[10px] text-white/50 leading-relaxed mb-4 uppercase tracking-wider line-clamp-3">{error}</p>
+          <div className="text-red-400 text-[10px] font-black uppercase tracking-widest mb-3">权限/访问异常</div>
+          <p className="text-[11px] text-white/60 leading-relaxed mb-6 tracking-wide line-clamp-4 px-2">{error}</p>
           <button 
             onClick={() => startCamera()}
-            className="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 rounded-full text-[9px] font-black uppercase tracking-[0.2em] text-black transition-all active:scale-95 shadow-[0_0_15px_rgba(255,204,51,0.3)] pointer-events-auto"
+            className="px-8 py-2.5 bg-yellow-500 hover:bg-yellow-400 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-black transition-all active:scale-95 shadow-[0_0_20px_rgba(255,204,51,0.2)] pointer-events-auto"
           >
-            Retry Access
+            重试授权
           </button>
         </div>
       )}
 
-      <div className="absolute top-2 left-2 px-3 py-1 bg-black/60 backdrop-blur-md rounded-lg text-[9px] font-bold tracking-[0.2em] uppercase text-white/70 border border-white/5 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-4 left-4 px-3 py-1 bg-yellow-500/10 backdrop-blur-md rounded-lg text-[8px] font-black tracking-[0.2em] uppercase text-yellow-500 border border-yellow-500/20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
         Live Feed
       </div>
     </div>
