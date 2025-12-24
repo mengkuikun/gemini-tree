@@ -1,0 +1,7 @@
+{
+  "name": "Celestial Gesture Christmas Tree",
+  "description": "A high-end, gesture-controlled 3D Christmas tree experience combining Three.js particles, photo clouds, and MediaPipe hand tracking.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
