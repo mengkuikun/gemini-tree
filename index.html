@@ -10,12 +10,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <style>
-    body { margin: 0; overflow: hidden; background-color: #050505; color: white; font-family: 'Inter', sans-serif; }
+    body { margin: 0; overflow: hidden; background-color: #020508; color: white; font-family: 'Inter', sans-serif; }
     canvas { display: block; }
     .glass {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
   </style>
 <script type="importmap">
@@ -25,8 +25,9 @@
     "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
     "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.4.2",
+    "three": "https://esm.sh/three@^0.182.0",
     "three/": "https://esm.sh/three@^0.182.0/",
-    "three": "https://esm.sh/three@^0.182.0"
+    "three/addons/": "https://esm.sh/three@0.182.0/examples/jsm/"
   }
 }
 </script>
